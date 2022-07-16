@@ -1,0 +1,17 @@
+# 2 dias
+Sprite do Kazuya (busto)
+Sprite do Kazuya (rosto)
+
+# 2 dias
+Sprite do Kaiji  (busto)
+Sprite do Kaiji  (rosto)
+
+# 1 dias
+Cenario/Mesa
+
+# 2 dias
+Oscar (diagonal)
+Oscar (vertical)
+
+Esteiras (full art)
+
