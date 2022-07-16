@@ -1,3 +1,4 @@
+from data.components.gui.message_animation import MessageAnimation
 from data.components.gui.match_result_box import MatchResultBox
 from data.components.gui.zawa_generator import ZawaGenerator
 from data.components.gui.card_button import CardButton
@@ -55,8 +56,20 @@ class GameScene(Scene):
 
         self.match_result_box = MatchResultBox()
 
+        self.message_animation = None
+        self.zawa_generator = ZawaGenerator([0,0,600,600])
+        self.silver_statue_button = Button([30, 260, 155, 163], image=GameScene.silver_statue)
+        self.red_statue_button = Button([215, 260, 155, 163], image=GameScene.red_statue_disabled)
+        self.bet_button = Button([400, 290, 176, 107], image=GameScene.bet_img)
+        self.fold_button = Button([461, 427, 115, 65], image=GameScene.fold_img)
+        self.up_button = Button([150, 260, 48, 42], image=GameScene.up_img)
+        self.down_button = Button([150, 340, 48, 42], image=GameScene.down_img)
+        self.current_bet_button = Button([150, 307, 48, 28], border=1, text='0')
+
     def set_game_info(self, local_game):
+
         print(local_game)
+        prev_local_game = self.local_game
         self.local_game = local_game
 
         if (self.local_game.state == Game.PLAYER_0_WIN and self.local_game.player_id == 0) or \
@@ -67,6 +80,11 @@ class GameScene(Scene):
             self.match_result_box.set_state(MatchResultBox.DEFEAT)
         elif self.local_game.state == Game.DRAW:
             self.match_result_box.set_state(MatchResultBox.DRAW)
+        else:
+            # If the game is not over, we'll print a phase transition
+            transition_message = self.get_phase_text(prev_local_game, self.local_game)
+            if transition_message != '':
+                self.message_animation = MessageAnimation(transition_message)
 
         start_x = 200 if (self.local_game.player_id == GameScene.KAIJI_INDEX) else 10
         self.card_buttons = [
@@ -78,17 +96,6 @@ class GameScene(Scene):
             self.played_card_button = CardButton([512, 20, 68, 100], None, local_game.card_played)
         else:
             self.played_card_button = None
-
-        self.zawa_generator = ZawaGenerator([0,0,600,600])
-
-        self.silver_statue_button = Button([30, 260, 155, 163], image=GameScene.silver_statue)
-        self.red_statue_button = Button([215, 260, 155, 163], image=GameScene.red_statue_disabled)
-        self.bet_button = Button([400, 290, 176, 107], image=GameScene.bet_img)
-        self.fold_button = Button([461, 427, 115, 65], image=GameScene.fold_img)
-        self.up_button = Button([150, 260, 48, 42], image=GameScene.up_img)
-        self.down_button = Button([150, 340, 48, 42], image=GameScene.down_img)
-        self.current_bet_button = Button([150, 307, 48, 28], border=1, text='0')
-
 
     def render_contents(self, screen):
 
@@ -159,6 +166,14 @@ class GameScene(Scene):
 
         self.zawa_generator.render(screen)
 
+        #=====================#
+        #= MESSAGE ANIMATION =#
+        #=====================#
+
+        if self.message_animation is not None:
+            self.message_animation.render(screen)
+            if self.message_animation.completed():
+                self.message_animation = None
 
         #====================#
         #= MATCH RESULT BOX =#
@@ -252,16 +267,14 @@ class GameScene(Scene):
                 if data_type == Network.SEND_GAME:
                     self.set_game_info(data)
 
-                self.current_bet = 0
-                self.current_red_bet = False
+                self.reset_betting()
 
             if self.fold_button.collide(mouse_pos):
                 data_type, data = self.control.send(Network.FOLD, timeout=0.1)
                 if data_type == Network.SEND_GAME:
                     self.set_game_info(data)
 
-                self.current_bet = 0
-                self.current_red_bet = False
+                self.reset_betting()
 
         elif (self.local_game.state == Game.PLAYER_0_BET and self.local_game.player_id == 1) or\
              (self.local_game.state == Game.PLAYER_1_BET and self.local_game.player_id == 0):
@@ -277,8 +290,34 @@ class GameScene(Scene):
         if data_type == Network.SEND_GAME:
             self.set_game_info(data)
 
+    def reset_betting(self):
+        self.red_statue_button.set_image(GameScene.red_statue_disabled)
+        self.current_bet_button.text = '0'
+        self.current_bet = 0
+        self.current_red_bet = False
+
     def return_to_menu(self):
         self.control.disconnect()
         self.game = None
         self.match_result_box.set_state(MatchResultBox.IDLE)
         self.control.set_active_scene('MENU_SCENE')
+
+    def get_phase_text(self, prev_local_game, next_local_game):
+        if prev_local_game is None:
+            return 'Game Starts!'
+
+        player_id = prev_local_game.player_id
+
+        if (next_local_game.state == Game.PLAYER_0_BET and player_id == 1) or \
+            (next_local_game.state == Game.PLAYER_1_BET and player_id == 0):
+            return 'Opponent is betting!'
+        elif (next_local_game.state == Game.PLAYER_0_BET and player_id == 0) or \
+                (next_local_game.state == Game.PLAYER_1_BET and player_id == 1):
+            return 'Time to bet!'
+
+        if prev_local_game.state == Game.PLAYER_0_BET or \
+           prev_local_game.state == Game.PLAYER_1_BET:
+            if next_local_game.state == Game.PLAY_CARDS:
+                return 'Showdown!'
+
+        return ''

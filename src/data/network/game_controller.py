@@ -99,12 +99,17 @@ class GameController():
             print(f'Invalid message: Can\'t bet more than one red statue.')
             return False
 
-        betted_amount = statues + (2 if red_statue else 0)
+        betted_amount = statues + (1 if red_statue else 0)
+
+        # You can't bet more than your opponent has
+        if betted_amount > self.game.stored_statues[(player_id+1)%2]:
+            print(f'Invalid message: Can\'t bet more than your opponent has. Got {betted_amount}. Need at most {self.game.stored_statues[(player_id+1)%2]}.')
+            return False
 
         # You can't bet less than your opponent
         if self.game.last_bet is not None:
             if betted_amount < self.game.last_bet:
-                print(f'Invalid message: Can\'t bet less than your opponent. Got {betted_amount}.')
+                print(f'Invalid message: Can\'t bet less than your opponent. Got {betted_amount}. Need at least {self.game.last_bet}.')
                 return False
         else:
             print(f'Betted: {betted_amount} and the last bet was {self.game.last_bet}.')
