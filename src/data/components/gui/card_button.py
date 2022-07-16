@@ -10,3 +10,6 @@ class CardButton(Button):
         self.card  = card
         image = pygame.image.load(CardButton.card_path + card + '.png')
         super().__init__(rect = rect, image = image, border=1, velocity=30)
+
+    def set_card(self, card):
+        self.set_image(pygame.image.load(CardButton.card_path + card + '.png'))

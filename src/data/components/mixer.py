@@ -9,13 +9,15 @@ class Mixer():
     # will be played in. Channel 0 is reserved for music.
     CLICK_SOUND = 1
     ZAWA_SOUND  = 2
+    CARD_REVEAL_SOUND = 3
 
     sound_to_file_dict = {}
 
     def initialize():
         Mixer.sound_to_file_dict = {
-            Mixer.CLICK_SOUND : pygame.mixer.Sound(Mixer.base_path + 'click.ogg'),
-            Mixer.ZAWA_SOUND  : pygame.mixer.Sound(Mixer.base_path + 'zawa.flac')
+            Mixer.CLICK_SOUND       : pygame.mixer.Sound(Mixer.base_path + 'click.ogg'),
+            Mixer.ZAWA_SOUND        : pygame.mixer.Sound(Mixer.base_path + 'zawa.flac'),
+            Mixer.CARD_REVEAL_SOUND : pygame.mixer.Sound(Mixer.base_path + 'Magic3.ogg')
         }
 
     def sound_to_file(sound):

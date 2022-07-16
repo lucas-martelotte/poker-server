@@ -1,3 +1,4 @@
+from data.components.gui.showdown_animation import ShowdownAnimation
 from data.components.gui.message_animation import MessageAnimation
 from data.components.gui.match_result_box import MatchResultBox
 from data.components.gui.zawa_generator import ZawaGenerator
@@ -56,6 +57,7 @@ class GameScene(Scene):
 
         self.match_result_box = MatchResultBox()
 
+        self.showdown_animation = None
         self.message_animation = None
         self.zawa_generator = ZawaGenerator([0,0,600,600])
         self.silver_statue_button = Button([30, 260, 155, 163], image=GameScene.silver_statue)
@@ -83,6 +85,11 @@ class GameScene(Scene):
         else:
             # If the game is not over, we'll print a phase transition
             transition_message = self.get_phase_text(prev_local_game, self.local_game)
+            if transition_message == 'Showdown!':
+                round_history = self.local_game.round_history
+                player_card = round_history[len(round_history)-1][self.local_game.player_id+1]
+                opponent_card = round_history[len(round_history)-1][(self.local_game.player_id+1)%2+1]
+                self.showdown_animation = ShowdownAnimation(player_card, opponent_card)
             if transition_message != '':
                 self.message_animation = MessageAnimation(transition_message)
 
@@ -174,6 +181,15 @@ class GameScene(Scene):
             self.message_animation.render(screen)
             if self.message_animation.completed():
                 self.message_animation = None
+
+        #====================#
+        #===== SHOWDOWN =====#
+        #====================#
+        if self.showdown_animation is not None:
+            pygame.draw.rect(screen, (0,0,0), [0,0,595,600])
+            self.showdown_animation.render(screen)
+            if self.showdown_animation.completed():
+                self.showdown_animation = None
 
         #====================#
         #= MATCH RESULT BOX =#
@@ -318,6 +334,13 @@ class GameScene(Scene):
         if prev_local_game.state == Game.PLAYER_0_BET or \
            prev_local_game.state == Game.PLAYER_1_BET:
             if next_local_game.state == Game.PLAY_CARDS:
+
+                round_history = self.local_game.round_history
+                opponent_card = round_history[len(round_history)-1][(self.local_game.player_id+1)%2+1]
+
+                if (opponent_card is None):
+                    return 'Opponent folded!'
+
                 return 'Showdown!'
 
         return ''
