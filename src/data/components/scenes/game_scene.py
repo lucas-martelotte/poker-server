@@ -424,8 +424,10 @@ class GameScene(Scene):
     def return_to_menu(self):
         self.control.disconnect()
         self.game = None
+        self.current_music = None
         self.match_result_box.set_state(MatchResultBox.IDLE)
         self.control.set_active_scene('MENU_SCENE')
+        pygame.mixer.music.stop()
 
     def get_phase_text(self, prev_local_game, next_local_game):
         if prev_local_game is None:
