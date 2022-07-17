@@ -1,3 +1,4 @@
+from data.components.mixer import Mixer
 from data.components.font import Font
 from config import FPS, WIDTH, HEIGHT
 import pygame
@@ -21,6 +22,9 @@ class MessageAnimation():
         self.text = text
 
     def render(self, screen):
+
+        if self.current_frame == 0:
+            Mixer.play(Mixer.NEW_PHASE_SOUND)
 
         if self.current_frame <= self.end_start_animation:
             rect_width = (self.current_frame*self.total_width)//self.end_start_animation

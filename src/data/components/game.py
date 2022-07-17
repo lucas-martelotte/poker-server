@@ -112,6 +112,7 @@ class Game():
             # If the other player played a red statue, they lose
             if self.red_betted_statues[1]:
                 self.state = Game.PLAYER_0_WIN
+                self.round_history.append((0, player_0_card, player_1_card))
                 return
 
             self.stored_statues[1] -= self.betted_statues[1]
@@ -121,6 +122,7 @@ class Game():
             # If the other player played a red statue, they lose
             if self.red_betted_statues[0]:
                 self.state = Game.PLAYER_1_WIN
+                self.round_history.append((1, player_0_card, player_1_card))
                 return
 
             self.stored_statues[0] -= self.betted_statues[0]

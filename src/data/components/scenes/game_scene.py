@@ -6,6 +6,7 @@ from data.components.gui.card_button import CardButton
 from data.components.gui.button import Button
 from data.components.scenes.scene import *
 from data.network.network import Network
+from data.components.mixer import Mixer
 from data.components.game import Game
 from data.components.font import Font
 from data.utils.auxiliary import *
@@ -17,6 +18,12 @@ class GameScene(Scene):
     backgrounds = [pygame.transform.smoothscale(pygame.image.load(f'./data/resources/img/sprites/match_bg_{i}.png'), (WIDTH, HEIGHT)) for i in range(1,6,1)]
 
     sidebar = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/sidebar.png"), (WIDTH, HEIGHT))
+    stored_statues_marker = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/stored_statues_marker.png"), (WIDTH, HEIGHT))
+
+    playing_phase_label = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/playing_phase_label.png"), (WIDTH, HEIGHT))
+    betting_phase_label = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/betting_phase_label.png"), (WIDTH, HEIGHT))
+    defeat_label  = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/defeat_label.png"), (WIDTH, HEIGHT))
+    victory_label = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/general/victory_label.png"), (WIDTH, HEIGHT))
 
     kaiji_sprite  = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/kaiji.png"), (WIDTH, HEIGHT))
     kazuya_sprite = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/kazuya.png"), (WIDTH, HEIGHT))
@@ -39,6 +46,16 @@ class GameScene(Scene):
     bet_img = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/bet.png"), (176, 107))
     fold_img = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/fold.png"), (115, 65))
 
+    up_up_img = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/up_up.png"), (87, 47))
+    up_down_img = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/up_down.png"), (87, 47))
+    down_down_img = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/down_down.png"), (87, 47))
+
+    kaiji_bet_avatar = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/kaiji_bet_avatar.png"), (80, 80))
+    kazuya_bet_avatar = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/kazuya_bet_avatar.png"), (80, 80))
+
+    mini_silver_statue = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/mini_silver_statue.png"), (40, 80))
+    mini_red_statue = pygame.transform.smoothscale(pygame.image.load("./data/resources/img/sprites/mini_red_statue.png"), (40, 80))
+
     KAIJI_INDEX  = 1
     KAZUYA_INDEX = 0
 
@@ -59,6 +76,7 @@ class GameScene(Scene):
 
         self.showdown_animation = None
         self.message_animation = None
+        self.hand_indicator_button = None
         self.zawa_generator = ZawaGenerator([0,0,600,600])
         self.silver_statue_button = Button([30, 260, 155, 163], image=GameScene.silver_statue)
         self.red_statue_button = Button([215, 260, 155, 163], image=GameScene.red_statue_disabled)
@@ -68,11 +86,26 @@ class GameScene(Scene):
         self.down_button = Button([150, 340, 48, 42], image=GameScene.down_img)
         self.current_bet_button = Button([150, 307, 48, 28], border=1, text='0')
 
+        self.current_music = None
+
     def set_game_info(self, local_game):
+
+        if self.current_music is None:
+            # In this case, the game just started and we'll play the initial music
+            self.current_music = Mixer.MAN_RACETRACK_MUSIC
+            Mixer.play_music(self.current_music)
 
         print(local_game)
         prev_local_game = self.local_game
         self.local_game = local_game
+
+        # Showdown animation
+        transition_message = self.get_phase_text(prev_local_game, self.local_game)
+        if transition_message == 'Showdown!':
+            round_history = self.local_game.round_history
+            player_card = round_history[len(round_history)-1][self.local_game.player_id+1]
+            opponent_card = round_history[len(round_history)-1][(self.local_game.player_id+1)%2+1]
+            self.showdown_animation = ShowdownAnimation(player_card, opponent_card)
 
         if (self.local_game.state == Game.PLAYER_0_WIN and self.local_game.player_id == 0) or \
            (self.local_game.state == Game.PLAYER_1_WIN and self.local_game.player_id == 1):
@@ -84,12 +117,6 @@ class GameScene(Scene):
             self.match_result_box.set_state(MatchResultBox.DRAW)
         else:
             # If the game is not over, we'll print a phase transition
-            transition_message = self.get_phase_text(prev_local_game, self.local_game)
-            if transition_message == 'Showdown!':
-                round_history = self.local_game.round_history
-                player_card = round_history[len(round_history)-1][self.local_game.player_id+1]
-                opponent_card = round_history[len(round_history)-1][(self.local_game.player_id+1)%2+1]
-                self.showdown_animation = ShowdownAnimation(player_card, opponent_card)
             if transition_message != '':
                 self.message_animation = MessageAnimation(transition_message)
 
@@ -127,19 +154,84 @@ class GameScene(Scene):
 
         screen.blit(GameScene.sidebar, (0,0))
 
+        # Getting the opponent hand indicator image
+        current_img = None
+        if self.local_game.opponent_high_cards == [True, True]:
+            current_img = GameScene.up_up_img
+        elif self.local_game.opponent_high_cards in [[True, False], [False, True]]:
+            current_img = GameScene.up_down_img
+        elif self.local_game.opponent_high_cards == [False, False]:
+            current_img = GameScene.down_down_img
+
+        if self.local_game.state in [Game.PLAYER_0_BET, Game.PLAYER_1_BET]:
+            screen.blit(GameScene.betting_phase_label, (0,0))
+        elif self.local_game.state == Game.PLAY_CARDS:
+            screen.blit(GameScene.playing_phase_label, (0,0))
+        elif (self.local_game.state == Game.PLAYER_0_WIN and self.local_game.player_id == 0) or \
+             (self.local_game.state == Game.PLAYER_1_WIN and self.local_game.player_id == 1):
+            screen.blit(GameScene.victory_label, (0,0))
+        elif (self.local_game.state == Game.PLAYER_0_WIN and self.local_game.player_id == 1) or \
+             (self.local_game.state == Game.PLAYER_1_WIN and self.local_game.player_id == 0):
+            screen.blit(GameScene.defeat_label, (0,0))
+
+        screen.blit(GameScene.stored_statues_marker, (0,0))
+
+        Button([674, 170, 20, 20], only_text=True, text_color=(255,255,255), font=Font.font_medium_plus,
+               text=f'{self.local_game.stored_statues[(self.local_game.player_id+1)%2]}').render(screen)
+
+        Button([700, 410, 20, 20], only_text=True, text_color=(255,255,255), font=Font.font_medium_plus,
+               text=f'{self.local_game.stored_statues[self.local_game.player_id]}').render(screen)
+
+
         if self.local_game.player_id == GameScene.KAZUYA_INDEX:
             # Kazuya
             screen.blit(GameScene.kaiji_sprite, (0,0))
             screen.blit(GameScene.kazuya_table, (0,0))
             screen.blit(GameScene.kazuya_bottom, (0,0))
             screen.blit(GameScene.kaiji_top, (0,0))
+            screen.blit(current_img, (225, 330))
+
+            if self.local_game.state in [Game.PLAYER_0_BET, Game.PLAYER_1_BET]:
+                screen.blit(GameScene.kazuya_bet_avatar, (10,10))
+                screen.blit(GameScene.kaiji_bet_avatar, (10,100))
+
         elif self.local_game.player_id == GameScene.KAIJI_INDEX:
             # Kaiji
             screen.blit(GameScene.kazuya_sprite, (0,0))
             screen.blit(GameScene.kaiji_table, (0,0))
             screen.blit(GameScene.kaiji_bottom, (0,0))
             screen.blit(GameScene.kazuya_top, (0,0))
+            screen.blit(current_img, (275, 330))
 
+            if self.local_game.state in [Game.PLAYER_0_BET, Game.PLAYER_1_BET]:
+                screen.blit(GameScene.kaiji_bet_avatar, (10,10))
+                screen.blit(GameScene.kazuya_bet_avatar, (10,100))
+
+        # Printing the betted statues
+        if self.local_game.state in [Game.PLAYER_0_BET, Game.PLAYER_1_BET]:
+            betted_red = self.local_game.red_betted_statues[self.local_game.player_id]
+            total_amount = self.local_game.betted_statues[self.local_game.player_id]
+            total_amount += 1 if betted_red else 0
+
+            distance = min(15, 120//total_amount)
+            for i in range(total_amount):
+                if i == total_amount-1 and betted_red:
+                    screen.blit(GameScene.mini_red_statue, (90+i*distance, 10))
+                    continue
+                screen.blit(GameScene.mini_silver_statue, (90+i*distance, 10))
+
+            betted_red = self.local_game.red_betted_statues[(self.local_game.player_id+1)%2]
+            total_amount = self.local_game.betted_statues[(self.local_game.player_id+1)%2]
+            total_amount += 1 if betted_red else 0
+
+            distance = min(15, 120//total_amount)
+            for i in range(total_amount):
+                if i == total_amount-1 and betted_red:
+                    screen.blit(GameScene.mini_red_statue, (90+i*distance, 100))
+                    continue
+                screen.blit(GameScene.mini_silver_statue, (90+i*distance, 100))
+
+        # Printing the betting buttons
         if (self.local_game.state == Game.PLAYER_1_BET and self.local_game.player_id == 1) or \
            (self.local_game.state == Game.PLAYER_0_BET and self.local_game.player_id == 0):
             self.silver_statue_button.render(screen)
@@ -149,7 +241,6 @@ class GameScene(Scene):
             self.up_button.render(screen)
             self.down_button.render(screen)
             self.current_bet_button.render(screen)
-
 
         #if self.selected_card is not None:
         #    Button([250,250,100,100], only_text=True, text_color=(255,255,255), font=Font.font_big,
@@ -182,14 +273,8 @@ class GameScene(Scene):
             if self.message_animation.completed():
                 self.message_animation = None
 
-        #====================#
-        #===== SHOWDOWN =====#
-        #====================#
-        if self.showdown_animation is not None:
-            pygame.draw.rect(screen, (0,0,0), [0,0,595,600])
-            self.showdown_animation.render(screen)
-            if self.showdown_animation.completed():
-                self.showdown_animation = None
+        # Printing a separator line between the sidebar and the game area on the left
+        pygame.draw.rect(screen, (0,0,0), [592, 0, 3, 600])
 
         #====================#
         #= MATCH RESULT BOX =#
@@ -198,14 +283,38 @@ class GameScene(Scene):
         if self.match_result_box.is_active():
             self.match_result_box.render(screen)
 
+        #====================#
+        #===== SHOWDOWN =====#
+        #====================#
+        if self.showdown_animation is not None:
+            pygame.draw.rect(screen, (0,0,0), [0,0,800,600])
+            self.showdown_animation.render(screen)
+            if self.showdown_animation.completed():
+                self.showdown_animation = None
+
+                # Here, we're goint to update the music
+                statues = self.local_game.stored_statues[self.local_game.player_id]
+                statue_percentage = statues/sum(self.local_game.stored_statues)
+
+                if statue_percentage <= 0.2:
+                    next_music = Mixer.PHOENIX_MUSIC
+                elif statue_percentage <= 0.8:
+                    next_music = Mixer.MAN_RACETRACK_MUSIC
+                else:
+                    next_music = Mixer.WHITE_HEAT_MUSIC
+
+                if next_music != self.current_music:
+                    self.current_music = next_music
+                    Mixer.play_music(next_music)
+
         #===============#
         #=== LOGGING ===#
         #===============#
 
-        Button([10,0,200,20], only_text=True, text_color=(255,255,255),
-               text=f'Stored: {self.local_game.stored_statues}').render(screen)
-        Button([10,20,200,20], only_text=True, text_color=(255,255,255),
-               text=f'Betted: {self.local_game.betted_statues}, {self.local_game.red_betted_statues}').render(screen)
+        #Button([10,0,200,20], only_text=True, text_color=(255,255,255),
+        #       text=f'Stored: {self.local_game.stored_statues}').render(screen)
+        #Button([10,20,200,20], only_text=True, text_color=(255,255,255),
+        #       text=f'Betted: {self.local_game.betted_statues}, {self.local_game.red_betted_statues}').render(screen)
 
     def update(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -333,13 +442,20 @@ class GameScene(Scene):
 
         if prev_local_game.state == Game.PLAYER_0_BET or \
            prev_local_game.state == Game.PLAYER_1_BET:
-            if next_local_game.state == Game.PLAY_CARDS:
+            if next_local_game.state in [Game.PLAY_CARDS, Game.PLAYER_1_WIN, Game.PLAYER_0_WIN, Game.DRAW]:
 
                 round_history = self.local_game.round_history
+                print(round_history)
                 opponent_card = round_history[len(round_history)-1][(self.local_game.player_id+1)%2+1]
 
                 if (opponent_card is None):
-                    return 'Opponent folded!'
+                    # Fold situation
+                    if (prev_local_game.state == Game.PLAYER_0_BET and player_id == 0) or \
+                       (prev_local_game.state == Game.PLAYER_1_BET and player_id == 1):
+                        return 'You folded!'
+                    elif (prev_local_game.state == Game.PLAYER_0_BET and player_id == 1) or \
+                         (prev_local_game.state == Game.PLAYER_1_BET and player_id == 0):
+                        return 'Opponent folded!'
 
                 return 'Showdown!'
 

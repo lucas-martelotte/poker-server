@@ -7,17 +7,24 @@ class Mixer():
 
     # The number indicate the sound channel it
     # will be played in. Channel 0 is reserved for music.
-    CLICK_SOUND = 1
-    ZAWA_SOUND  = 2
+    CLICK_SOUND       = 1
+    ZAWA_SOUND        = 2
     CARD_REVEAL_SOUND = 3
+    NEW_PHASE_SOUND   = 4
+
+    # Music enum
+    MAN_RACETRACK_MUSIC = base_path + 'music/man_racetrack.mp3'
+    PHOENIX_MUSIC       = base_path + 'music/phoenix.mp3'
+    WHITE_HEAT_MUSIC    = base_path + 'music/white_heat.mp3'
 
     sound_to_file_dict = {}
 
     def initialize():
         Mixer.sound_to_file_dict = {
-            Mixer.CLICK_SOUND       : pygame.mixer.Sound(Mixer.base_path + 'click.ogg'),
-            Mixer.ZAWA_SOUND        : pygame.mixer.Sound(Mixer.base_path + 'zawa.flac'),
-            Mixer.CARD_REVEAL_SOUND : pygame.mixer.Sound(Mixer.base_path + 'Magic3.ogg')
+            Mixer.CLICK_SOUND         : pygame.mixer.Sound(Mixer.base_path + 'click.ogg'),
+            Mixer.ZAWA_SOUND          : pygame.mixer.Sound(Mixer.base_path + 'zawa.flac'),
+            Mixer.CARD_REVEAL_SOUND   : pygame.mixer.Sound(Mixer.base_path + 'Magic3.ogg'),
+            Mixer.NEW_PHASE_SOUND     : pygame.mixer.Sound(Mixer.base_path + 'Sword5.ogg')
         }
 
     def sound_to_file(sound):
@@ -35,11 +42,11 @@ class Mixer():
         pygame.mixer.Channel(sound).play(sound_file)
 
     def play_music(music, volume=0.01):
-        music_file = Mixer.sound_to_file(music)
-        if not sound_file:
+        if not music in [Mixer.MAN_RACETRACK_MUSIC, Mixer.PHOENIX_MUSIC, Mixer.WHITE_HEAT_MUSIC]:
             return
-        pygame.mixer.Channel(0).set_volume(volume)
-        pygame.mixer.Channel(0).play(music_file)
+        pygame.mixer.music.set_volume(volume)
+        pygame.mixer.music.load(music)
+        pygame.mixer.music.play(loops=-1)
 
     def __init__(self):
         pass
