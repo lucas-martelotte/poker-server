@@ -23,7 +23,6 @@ class Network():
     SEND_GAME     = 502
     VICTORY       = 503
     DEFEAT        = 504
-    NEW_TURN      = 505
 
     #=====================#
     #= Status Data Types =#
@@ -44,7 +43,6 @@ class Network():
         SEND_GAME         : 'SEND_GAME',
         VICTORY           : 'VICTORY',
         DEFEAT            : 'DEFEAT',
-        NEW_TURN          : 'NEW_TURN',
         FAILED            : 'FAILED',
         SUCCESS           : 'SUCCESS'
                         }
